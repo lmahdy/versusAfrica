@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>3D Solar System with Controls</title>
+  <title>3D Solar System with Real-Time Controls</title>
   <style>
     body { margin: 0; }
     canvas { display: block; }
@@ -17,15 +17,27 @@
       border: none;
       cursor: pointer;
     }
+    #time-scale {
+      position: absolute;
+      top: 50px;
+      left: 10px;
+      width: 200px;
+    }
   </style>
 </head>
 <body>
   <app-root></app-root>
   <button id="control-button">Stop</button>
+  <select id="time-scale">
+    <option value="3600">1 Hour</option>
+    <option value="86400">1 Day</option>
+    <option value="604800">1 Week</option>
+    <option value="2592000">1 Month</option>
+    <option value="31536000">1 Year</option>
+  </select>
 
   <!-- Import Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- Import OrbitControls from Three.js Examples -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
   <script>
@@ -33,14 +45,12 @@
     const scene = new THREE.Scene();
     const backgroundTextureLoader = new THREE.TextureLoader();
     const backgroundTexture = backgroundTextureLoader.load('assets/textures/space.jpg'); // Path to your background image
-
-    // Set the scene background to the loaded texture
     scene.background = backgroundTexture;
-    
+
     // Camera setup
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(15, 15, 30);  // Move the camera further back for a better view
-    
+    camera.position.set(15, 15, 30);  
+
     // Renderer setup
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -48,84 +58,96 @@
 
     // OrbitControls setup
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableZoom = true;     // Enable zooming
-    controls.enablePan = true;      // Enable panning
-    controls.enableRotate = true;   // Enable rotation
-    controls.minDistance = 5;       // Minimum zoom distance
-    controls.maxDistance = 100;     // Maximum zoom distance
+    controls.enableZoom = true;
+    controls.enablePan = true;
+    controls.enableRotate = true;
+    controls.minDistance = 5;
+    controls.maxDistance = 100;
 
     // Sun
     const textureLoader = new THREE.TextureLoader();
-
     const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
-    const sunMaterial = new THREE.MeshBasicMaterial({ 
-      map: textureLoader.load('assets/textures/sun.jpg'), // Load the Sun texture
-      side: THREE.DoubleSide // Make it two-sided
+    const sunMaterial = new THREE.MeshBasicMaterial({
+      map: textureLoader.load('assets/textures/sun.jpg'),
+      side: THREE.DoubleSide
     });
 
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sun);
 
-    // Load textures for planets
+    // Define real orbital periods (in Earth days)
+    const orbitalPeriods = {
+      Mercury: 88,
+      Venus: 225,
+      Earth: 365.25,
+      Mars: 687,
+      Jupiter: 4333,
+      Saturn: 10759,
+      Uranus: 30687,
+      Neptune: 60190
+    };
+
+    // Create planets and their orbits
     const planets = [
-      { name: 'Mercury', size: 0.5, distance: 5, texture: 'assets/textures/mercury.jpg', lambda: 15, phi: 1, rho: 1 },
-      { name: 'Venus', size: 0.8, distance: 7, texture: 'assets/textures/venus.jpg', lambda: 20, phi: 1, rho: 4 },
-      { name: 'Earth', size: 1, distance: 10, texture: 'assets/textures/earth.jpg', lambda: 20, phi: 8, rho: 6 },
-      { name: 'Mars', size: 0.6, distance: 13, texture: 'assets/textures/mars.jpg', lambda: 40, phi: 2, rho: 25 },
-      { name: 'Jupiter', size: 2, distance: 17, texture: 'assets/textures/jupiter.jpg', lambda: 400, phi: 10, rho: 600 },
-      { name: 'Saturn', size: 1.8, distance: 22, texture: 'assets/textures/saturn.jpg', lambda: 600, phi: 25, rho: 1500 },
-      { name: 'Uranus', size: 1.3, distance: 28, texture: 'assets/textures/uranus.jpg', lambda: 50, phi: 2, rho: 1000 },
-      { name: 'Neptune', size: 1.2, distance: 32, texture: 'assets/textures/neptune.jpg', lambda: 10, phi: 1, rho: 200 }
+      { name: 'Mercury', size: 0.5, distance: 5, texture: 'assets/textures/mercury.jpg', orbitalPeriod: orbitalPeriods.Mercury },
+      { name: 'Venus', size: 0.8, distance: 7, texture: 'assets/textures/venus.jpg', orbitalPeriod: orbitalPeriods.Venus },
+      { name: 'Earth', size: 1, distance: 10, texture: 'assets/textures/earth.jpg', orbitalPeriod: orbitalPeriods.Earth },
+      { name: 'Mars', size: 0.6, distance: 13, texture: 'assets/textures/mars.jpg', orbitalPeriod: orbitalPeriods.Mars },
+      { name: 'Jupiter', size: 2, distance: 17, texture: 'assets/textures/jupiter.jpg', orbitalPeriod: orbitalPeriods.Jupiter },
+      { name: 'Saturn', size: 1.8, distance: 22, texture: 'assets/textures/saturn.jpg', orbitalPeriod: orbitalPeriods.Saturn },
+      { name: 'Uranus', size: 1.3, distance: 28, texture: 'assets/textures/uranus.jpg', orbitalPeriod: orbitalPeriods.Uranus },
+      { name: 'Neptune', size: 1.2, distance: 32, texture: 'assets/textures/neptune.jpg', orbitalPeriod: orbitalPeriods.Neptune }
     ];
 
-    // Function to create a circular orbit
-    function createOrbit(distance) {
-      const orbitGeometry = new THREE.CircleGeometry(distance, 64);
-      const orbitMaterial = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.5, transparent: true });
-      const orbit = new THREE.LineLoop(orbitGeometry, orbitMaterial);
-      orbit.rotation.x = Math.PI / 2; // Rotate to make it horizontal
-      scene.add(orbit);
-    }
-
-    // Function to create planets with textures and orbital parameters (λ, ϕ, ρ)
-    function createPlanet(size, distance, texture, lambda, phi, rho) {
+    // Function to create a planet with real-time orbital period
+    function createPlanet(size, distance, texture, orbitalPeriod) {
       const geometry = new THREE.SphereGeometry(size, 32, 32);
       const material = new THREE.MeshBasicMaterial({ map: textureLoader.load(texture), side: THREE.DoubleSide });
       const planet = new THREE.Mesh(geometry, material);
 
       const orbit = new THREE.Object3D();
       orbit.add(planet);
-      planet.position.set(distance, 0, 0); // Position the planet at its distance from the Sun
+      planet.position.set(distance, 0, 0); // Position planet at its distance from the Sun
       scene.add(orbit);
 
-      createOrbit(distance);
-      return { planet, orbit, lambda, phi, rho };
+      return { planet, orbit, orbitalPeriod };
     }
 
     // Create planets and store them in an array
-    const celestialBodies = planets.map(p => createPlanet(p.size, p.distance, p.texture, p.lambda, p.phi, p.rho));
+    const celestialBodies = planets.map(p => createPlanet(p.size, p.distance, p.texture, p.orbitalPeriod));
 
-    // Lighting (to simulate the Sun's light)
+    // Lighting
     const light = new THREE.PointLight(0xffffff, 1.5, 100);
-    light.position.set(0, 0, 0); // The Sun is the light source
+    light.position.set(0, 0, 0); // Sun as light source
     scene.add(light);
 
-    // Ambient Light (to ensure planets are visible from all angles)
+    // Ambient light
     const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
     scene.add(ambientLight);
 
     // Camera initial position
     camera.position.z = 50;
 
-    // Animation flag
+    // Animation flag and real-time control
     let isAnimating = true;
+    let realTimeFactor = 3600; // Default to 1 hour (3600 seconds)
+
+    // Get the time scale selector element
+    const timeScale = document.getElementById('time-scale');
+    
+    // Listen for changes in the time scale selector
+    timeScale.addEventListener('change', (event) => {
+      realTimeFactor = event.target.value; // Update real-time factor
+    });
 
     // Animation loop
     function animate() {
       if (isAnimating) {
+        const currentTime = Date.now(); // Get the current time
         celestialBodies.forEach(body => {
-          body.orbit.rotation.y += body.lambda / 100000; // Lambda affects orbit speed (scaled down for better effect)
-          body.orbit.rotation.x = body.phi / 10000;     // Phi affects tilt
+          const daysPerSecond = realTimeFactor / (24 * 60 * 60); // Convert real time to days per second
+          const rotationSpeed = daysPerSecond / body.orbitalPeriod; // Orbit fraction per second
+          body.orbit.rotation.y += rotationSpeed * 2 * Math.PI; // Rotate the planet based on time
         });
 
         sun.rotation.y += 0.005; // Rotate Sun on its axis
@@ -150,7 +172,6 @@
       isAnimating = !isAnimating;
       document.getElementById('control-button').textContent = isAnimating ? 'Stop' : 'Start';
     });
-
   </script>
 </body>
 </html>
