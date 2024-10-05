@@ -7,12 +7,21 @@
   <style>
     body { margin: 0; }
     canvas { display: block; }
-    
-
+    #control-button {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      padding: 10px 20px;
+      background-color: #333;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <app-root></app-root>
+  <button id="control-button">Stop</button>
 
   <!-- Import Three.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -42,7 +51,6 @@
     controls.maxDistance = 100;     // Maximum zoom distance
 
     // Sun
-    const sunTextureLoader = new THREE.TextureLoader();
     const textureLoader = new THREE.TextureLoader();
 
     const sunGeometry = new THREE.SphereGeometry(3, 32, 32);
@@ -55,7 +63,6 @@
     scene.add(sun);
 
     // Load textures for planets
-    // Planet data: name, size, distance from the sun, texture, and orbital parameters (λ, ϕ, ρ)
     const planets = [
       { name: 'Mercury', size: 0.5, distance: 5, texture: 'assets/textures/mercury.jpg', lambda: 15, phi: 1, rho: 1 },
       { name: 'Venus', size: 0.8, distance: 7, texture: 'assets/textures/venus.jpg', lambda: 20, phi: 1, rho: 4 },
@@ -78,28 +85,18 @@
 
     // Function to create planets with textures and orbital parameters (λ, ϕ, ρ)
     function createPlanet(size, distance, texture, lambda, phi, rho) {
-  const geometry = new THREE.SphereGeometry(size, 32, 32);
-  
-  // Set side to DoubleSide to show the texture on both sides
-  const material = new THREE.MeshBasicMaterial({ 
-    map: textureLoader.load(texture),
-    
-    
-    side: THREE.DoubleSide // Show the texture on both sides
-  });
-  
-  const planet = new THREE.Mesh(geometry, material);
+      const geometry = new THREE.SphereGeometry(size, 32, 32);
+      const material = new THREE.MeshBasicMaterial({ map: textureLoader.load(texture), side: THREE.DoubleSide });
+      const planet = new THREE.Mesh(geometry, material);
 
-  const orbit = new THREE.Object3D();
-  orbit.add(planet);
-  planet.position.set(distance, 0, 0); // Position the planet at its distance from the Sun
-  scene.add(orbit);
+      const orbit = new THREE.Object3D();
+      orbit.add(planet);
+      planet.position.set(distance, 0, 0); // Position the planet at its distance from the Sun
+      scene.add(orbit);
 
-  // Create an orbit circle for the planet
-  createOrbit(distance);
-
-  return { planet, orbit, lambda, phi, rho };
-}
+      createOrbit(distance);
+      return { planet, orbit, lambda, phi, rho };
+    }
 
     // Create planets and store them in an array
     const celestialBodies = planets.map(p => createPlanet(p.size, p.distance, p.texture, p.lambda, p.phi, p.rho));
@@ -116,23 +113,23 @@
     // Camera initial position
     camera.position.z = 50;
 
+    // Animation flag
+    let isAnimating = true;
+
     // Animation loop
     function animate() {
-      requestAnimationFrame(animate);
+      if (isAnimating) {
+        celestialBodies.forEach(body => {
+          body.orbit.rotation.y += body.lambda / 100000; // Lambda affects orbit speed (scaled down for better effect)
+          body.orbit.rotation.x = body.phi / 10000;     // Phi affects tilt
+        });
 
-      // Rotate each planet around the Sun based on lambda, phi, and rho values
-      celestialBodies.forEach(body => {
-        body.orbit.rotation.y += body.lambda / 100000; // Lambda affects orbit speed (scaled down for better effect)
-        body.orbit.rotation.x = body.phi / 10000;     // Phi affects tilt
-      });
+        sun.rotation.y += 0.005; // Rotate Sun on its axis
+      }
 
-      // Rotate Sun on its axis (y-axis)
-      sun.rotation.y += 0.005; // Adjust speed as necessary
-
-      // Update controls
       controls.update();
-
       renderer.render(scene, camera);
+      requestAnimationFrame(animate);
     }
 
     animate();
@@ -143,7 +140,13 @@
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
-  </script>
 
+    // Toggle animation when button is clicked
+    document.getElementById('control-button').addEventListener('click', () => {
+      isAnimating = !isAnimating;
+      document.getElementById('control-button').textContent = isAnimating ? 'Stop' : 'Start';
+    });
+
+  </script>
 </body>
 </html>
