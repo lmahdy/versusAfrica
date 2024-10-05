@@ -31,7 +31,11 @@
   <script>
     // Scene setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000); // Space black background
+    const backgroundTextureLoader = new THREE.TextureLoader();
+    const backgroundTexture = backgroundTextureLoader.load('assets/textures/space.jpg'); // Path to your background image
+
+    // Set the scene background to the loaded texture
+    scene.background = backgroundTexture;
     
     // Camera setup
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
